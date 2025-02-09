@@ -2,10 +2,10 @@ local Players, RunService, TweenService = game:GetService("Players"), game:GetSe
 local player = Players.LocalPlayer
 if not player then return end
 
--- Funktion zur Überprüfung unerwünschter Wörter im Namen
+-- Function to check for bad words in the name
 local function containsBadWords(name)
     local badWords = {"skibidi", "Hacker", "hackur"}
-    name = name:lower() -- Konvertiere den Namen in Kleinbuchstaben für den Vergleich
+    name = name:lower() -- Convert the name to lowercase for comparison
     for _, word in ipairs(badWords) do
         if name:find(word:lower()) then
             return true
@@ -14,27 +14,27 @@ local function containsBadWords(name)
     return false
 end
 
--- Funktion zum Kicken von Spielern mit unerwünschten Namen
+-- Function to kick players with bad names
 local function kickPlayerIfBadName(player)
     if containsBadWords(player.Name) then
         player:Kick("Bad Name bro")
     end
 end
 
--- Überprüfe den lokalen Spieler
+-- Check the local player
 kickPlayerIfBadName(player)
 
--- Überprüfe alle Spieler, die bereits im Spiel sind
+-- Check all players already in the game
 for _, otherPlayer in ipairs(Players:GetPlayers()) do
     kickPlayerIfBadName(otherPlayer)
 end
 
--- Überprüfe neue Spieler, die dem Spiel beitreten
+-- Check new players joining the game
 Players.PlayerAdded:Connect(kickPlayerIfBadName)
 
 -- Feature states
 local aimbot, teamOnly, skyTP, betterMovement, lockedTarget, originalY, checkFall, prevPosition = false, false, false, false, nil, nil, false, nil
-local selectedPlayer = nil -- Speichert den ausgewählten Spieler
+local selectedPlayer = nil -- Stores the selected player
 
 -- GUI Setup
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -179,7 +179,7 @@ createToggleButton(frame, "Exit", UDim2.new(0.05, 0, 0.66, 0), function()
     return false
 end)
 
--- Funktion zum Aktualisieren des Select Player Buttons
+-- Function to update the Select Player Button
 local function updateSelectPlayerButton()
     if selectedPlayer then
         selectPlayerButton.Text = "Unselect " .. selectedPlayer.Name
@@ -188,19 +188,19 @@ local function updateSelectPlayerButton()
     end
 end
 
--- Funktion zum Entfernen der Auswahl
+-- Function to unselect a player
 local function unselectPlayer()
     selectedPlayer = nil
     updateSelectPlayerButton()
 end
 
--- Funktion zum Auswählen eines Spielers
+-- Function to select a player
 local function selectPlayer(player)
     selectedPlayer = player
     updateSelectPlayerButton()
 end
 
--- Neue Funktion: Spielerliste anzeigen (mobil-optimiert)
+-- New function: Show player list (mobile-optimized)
 local function showPlayerList()
     local playerListFrame = Instance.new("Frame", gui)
     playerListFrame.Size, playerListFrame.Position, playerListFrame.BackgroundColor3 = UDim2.new(0.8, 0, 0.8, 0), UDim2.new(0.1, 0, 0.1, 0), Color3.fromRGB(40, 40, 40)
@@ -217,24 +217,24 @@ local function showPlayerList()
             playerButton.Size, playerButton.Position, playerButton.BackgroundColor3, playerButton.Text, playerButton.TextSize, playerButton.Font, playerButton.TextColor3 = UDim2.new(1, -10, 0, 35), UDim2.new(0, 5, 0, (i - 1) * 40), Color3.fromRGB(255, 255, 255), otherPlayer.Name, 14, Enum.Font.Gotham, Color3.fromRGB(0, 0, 0)
             Instance.new("UICorner", playerButton).CornerRadius = UDim.new(0.1, 0)
 
-            -- Event-Handler für den Klick auf den Spieler-Button (Touch-freundlich)
+            -- Event handler for clicking the player button (touch-friendly)
             playerButton.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                     if selectedPlayer == otherPlayer then
-                        -- Wenn der gleiche Spieler erneut geklickt wird, wird die Auswahl aufgehoben
+                        -- If the same player is clicked again, unselect them
                         selectedPlayer = nil
                     else
-                        -- Andernfalls wird der Spieler ausgewählt
+                        -- Otherwise, select the player
                         selectedPlayer = otherPlayer
                     end
-                    updateSelectPlayerButton() -- Aktualisiere den Button-Text
-                    playerListFrame:Destroy() -- Schließe die Spielerliste nach der Auswahl
+                    updateSelectPlayerButton() -- Update the button text
+                    playerListFrame:Destroy() -- Close the player list after selection
                 end
             end)
         end
     end
 
-    -- Schließen-Button
+    -- Close button
     local closeButton = Instance.new("TextButton", playerListFrame)
     closeButton.Size, closeButton.Position, closeButton.BackgroundColor3, closeButton.Text, closeButton.TextSize, closeButton.Font, closeButton.TextColor3 = UDim2.new(1, -10, 0, 35), UDim2.new(0, 5, 1, -35), Color3.fromRGB(255, 0, 0), "Close", 14, Enum.Font.Gotham, Color3.fromRGB(255, 255, 255)
     closeButton.InputBegan:Connect(function(input)
@@ -244,7 +244,7 @@ local function showPlayerList()
     end)
 end
 
--- Neuer Button: Spielerliste anzeigen
+-- New button: Show player list
 local selectPlayerButton = createToggleButton(frame, "Select Player", UDim2.new(0.05, 0, 0.78, 0), function()
     if selectedPlayer then
         unselectPlayer()
