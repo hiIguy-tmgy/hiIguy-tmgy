@@ -1,0 +1,255 @@
+local Players, RunService, TweenService = game:GetService("Players"), game:GetService("RunService"), game:GetService("TweenService")
+local player = Players.LocalPlayer
+if not player then return end
+
+-- Funktion zur Überprüfung unerwünschter Wörter im Namen
+local function containsBadWords(name)
+    local badWords = {"skibidi", "Hacker", "hackur"}
+    name = name:lower() -- Konvertiere den Namen in Kleinbuchstaben für den Vergleich
+    for _, word in ipairs(badWords) do
+        if name:find(word:lower()) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Funktion zum Kicken von Spielern mit unerwünschten Namen
+local function kickPlayerIfBadName(player)
+    if containsBadWords(player.Name) then
+        player:Kick("Bad Name bro")
+    end
+end
+
+-- Überprüfe den lokalen Spieler
+kickPlayerIfBadName(player)
+
+-- Überprüfe alle Spieler, die bereits im Spiel sind
+for _, otherPlayer in ipairs(Players:GetPlayers()) do
+    kickPlayerIfBadName(otherPlayer)
+end
+
+-- Überprüfe neue Spieler, die dem Spiel beitreten
+Players.PlayerAdded:Connect(kickPlayerIfBadName)
+
+-- Feature states
+local aimbot, teamOnly, skyTP, betterMovement, lockedTarget, originalY, checkFall, prevPosition = false, false, false, false, nil, nil, false, nil
+local selectedPlayer = nil -- Speichert den ausgewählten Spieler
+
+-- GUI Setup
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.ResetOnSpawn, gui.Name = false, "hilguys aka tmgy OP GUI"
+local frame = Instance.new("Frame", gui)
+frame.Size, frame.Position, frame.BackgroundColor3, frame.BackgroundTransparency = UDim2.new(0, 100, 0, 200), UDim2.new(0.4, 0, 0.3, 0), Color3.fromRGB(30, 30, 30), 0.2
+frame.Active, frame.Draggable = true, true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0.15, 0)
+
+local title = Instance.new("TextLabel", frame)
+title.Size, title.BackgroundTransparency, title.Text, title.TextSize, title.Font, title.TextColor3, title.TextWrapped = UDim2.new(1, 0, 0.15, 0), 1, "hilguys aka tmgy OP GUI", 14, Enum.Font.GothamBold, Color3.fromRGB(255, 50, 50), true
+
+-- Animate GUI
+local function animateGUI()
+    TweenService:Create(frame, TweenInfo.new(3), {Size = UDim2.new(0, 100, 0, 200)}):Play()
+end
+animateGUI()
+
+-- Toggle Button Function
+local function createToggleButton(parent, text, pos, callback, sizeX)
+    sizeX = sizeX or 0.9
+    local btn = Instance.new("TextButton", parent)
+    btn.Size, btn.Position, btn.BackgroundColor3, btn.Text, btn.TextSize, btn.Font, btn.TextColor3 = UDim2.new(sizeX, 0, 0.1, 0), pos, Color3.fromRGB(255, 255, 255), text, 10, Enum.Font.Gotham, Color3.fromRGB(0, 0, 0)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0.2, 0)
+    btn.MouseButton1Click:Connect(function()
+        local active = callback(btn)
+        btn.BackgroundColor3, btn.TextColor3 = active and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255), active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)
+    end)
+    return btn
+end
+
+-- Find Closest Enemy
+local function findClosestEnemy()
+    local closest, minDist = nil, math.huge
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid").Health > 0 then
+            if teamOnly and p.Team == player.Team then continue end
+            local dist = (player.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+            if dist < minDist then closest, minDist = p.Character.HumanoidRootPart, dist end
+        end
+    end
+    return closest
+end
+
+-- Aimbot Logic
+RunService.RenderStepped:Connect(function()
+    if aimbot then
+        local target = selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") or findClosestEnemy()
+        if target and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            -- Smoothly aim at the target
+            local camera = workspace.CurrentCamera
+            local targetPosition = target.Position
+            local cameraPosition = camera.CFrame.Position
+            camera.CFrame = CFrame.new(cameraPosition, targetPosition)
+        end
+    end
+end)
+
+-- Handle Player Respawn
+player.CharacterAdded:Connect(function()
+    -- Reapply active features to the new character
+    if skyTP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        -- Re-enable sky TP
+        local root = player.Character.HumanoidRootPart
+        root.Position = root.Position + Vector3.new(0, 10000, 0)
+        checkFall = true
+    end
+
+    if betterMovement and player.Character and player.Character:FindFirstChild("Humanoid") then
+        -- Re-enable better movement
+        local humanoid = player.Character.Humanoid
+        humanoid.WalkSpeed, humanoid.JumpPower = humanoid.WalkSpeed * 1.5, humanoid.JumpPower * 1.5
+    end
+end)
+
+-- TP to Enemy (Power-Up)
+createToggleButton(frame, "TP to Enemy", UDim2.new(0.05, 0, 0.18, 0), function()
+    local target = selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") or findClosestEnemy()
+    if target then
+        prevPosition = player.Character.HumanoidRootPart.Position
+        local targetHead = target.Parent:FindFirstChild("Head")
+        if targetHead then
+            -- Use a tween to make the teleportation look more natural
+            TweenService:Create(player.Character.HumanoidRootPart, TweenInfo.new(0.5), {CFrame = CFrame.new(targetHead.Position + Vector3.new(0, 5, 0))}):Play()
+        end
+    end
+    return false
+end)
+
+-- Aimbot (Power-Up)
+createToggleButton(frame, "Aimbot", UDim2.new(0.05, 0, 0.30, 0), function()
+    aimbot = not aimbot
+    return aimbot
+end, 0.45)
+
+-- Team-Only Targeting
+createToggleButton(frame, "Team", UDim2.new(0.55, 0, 0.30, 0), function()
+    teamOnly = not teamOnly
+    return teamOnly
+end, 0.45)
+
+-- Sky TP (Power-Up)
+createToggleButton(frame, "Sky TP", UDim2.new(0.05, 0, 0.42, 0), function()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local root = player.Character.HumanoidRootPart
+        if not skyTP then
+            originalY = root.Position.Y
+            root.Position = root.Position + Vector3.new(0, 10000, 0)
+            checkFall = true
+        else
+            root.Position = Vector3.new(root.Position.X, originalY, root.Position.Z)
+            checkFall = false
+        end
+        skyTP = not skyTP
+    end
+    return skyTP
+end)
+
+-- Better Movement (Power-Up)
+createToggleButton(frame, "Better Movement", UDim2.new(0.05, 0, 0.54, 0), function()
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        local humanoid = player.Character.Humanoid
+        betterMovement = not betterMovement
+        humanoid.WalkSpeed, humanoid.JumpPower = betterMovement and humanoid.WalkSpeed * 1.5 or humanoid.WalkSpeed / 1.5, betterMovement and humanoid.JumpPower * 1.5 or humanoid.JumpPower / 1.5
+    end
+    return betterMovement
+end)
+
+-- Exit GUI
+createToggleButton(frame, "Exit", UDim2.new(0.05, 0, 0.66, 0), function()
+    local confirmFrame = Instance.new("Frame", gui)
+    confirmFrame.Size, confirmFrame.Position, confirmFrame.BackgroundColor3 = UDim2.new(0, 120, 0, 100), UDim2.new(0.42, 0, 0.4, 0), Color3.fromRGB(40, 40, 40)
+    confirmFrame.Active = true
+    Instance.new("UICorner", confirmFrame).CornerRadius = UDim.new(0.1, 0)
+
+    local confirmText = Instance.new("TextLabel", confirmFrame)
+    confirmText.Size, confirmText.BackgroundTransparency, confirmText.Text, confirmText.TextSize, confirmText.Font, confirmText.TextColor3, confirmText.TextWrapped = UDim2.new(1, 0, 0.5, 0), 1, "Exit GUI?", 14, Enum.Font.GothamBold, Color3.fromRGB(255, 255, 255), true
+
+    createToggleButton(confirmFrame, "Yes", UDim2.new(0.05, 0, 0.55, 0), function() gui:Destroy() end)
+    createToggleButton(confirmFrame, "No", UDim2.new(0.05, 0, 0.75, 0), function() confirmFrame:Destroy() end)
+
+    return false
+end)
+
+-- Funktion zum Aktualisieren des Select Player Buttons
+local function updateSelectPlayerButton()
+    if selectedPlayer then
+        selectPlayerButton.Text = "Unselect " .. selectedPlayer.Name
+    else
+        selectPlayerButton.Text = "Select Player"
+    end
+end
+
+-- Funktion zum Entfernen der Auswahl
+local function unselectPlayer()
+    selectedPlayer = nil
+    updateSelectPlayerButton()
+end
+
+-- Funktion zum Auswählen eines Spielers
+local function selectPlayer(player)
+    selectedPlayer = player
+    updateSelectPlayerButton()
+end
+
+-- Neue Funktion: Spielerliste anzeigen (mobil-optimiert)
+local function showPlayerList()
+    local playerListFrame = Instance.new("Frame", gui)
+    playerListFrame.Size, playerListFrame.Position, playerListFrame.BackgroundColor3 = UDim2.new(0.8, 0, 0.8, 0), UDim2.new(0.1, 0, 0.1, 0), Color3.fromRGB(40, 40, 40)
+    playerListFrame.Active = true
+    Instance.new("UICorner", playerListFrame).CornerRadius = UDim.new(0.1, 0)
+
+    local scrollFrame = Instance.new("ScrollingFrame", playerListFrame)
+    scrollFrame.Size, scrollFrame.Position, scrollFrame.BackgroundTransparency = UDim2.new(1, 0, 1, -40), UDim2.new(0, 0, 0, 0), 1
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #Players:GetPlayers() * 40)
+
+    for i, otherPlayer in ipairs(Players:GetPlayers()) do
+        if otherPlayer ~= player then
+            local playerButton = Instance.new("TextButton", scrollFrame)
+            playerButton.Size, playerButton.Position, playerButton.BackgroundColor3, playerButton.Text, playerButton.TextSize, playerButton.Font, playerButton.TextColor3 = UDim2.new(1, -10, 0, 35), UDim2.new(0, 5, 0, (i - 1) * 40), Color3.fromRGB(255, 255, 255), otherPlayer.Name, 14, Enum.Font.Gotham, Color3.fromRGB(0, 0, 0)
+            Instance.new("UICorner", playerButton).CornerRadius = UDim.new(0.1, 0)
+
+            -- Event-Handler für den Klick auf den Spieler-Button (Touch-freundlich)
+            playerButton.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if selectedPlayer == otherPlayer then
+                        -- Wenn der gleiche Spieler erneut geklickt wird, wird die Auswahl aufgehoben
+                        selectedPlayer = nil
+                    else
+                        -- Andernfalls wird der Spieler ausgewählt
+                        selectedPlayer = otherPlayer
+                    end
+                    updateSelectPlayerButton() -- Aktualisiere den Button-Text
+                    playerListFrame:Destroy() -- Schließe die Spielerliste nach der Auswahl
+                end
+            end)
+        end
+    end
+
+    -- Schließen-Button
+    local closeButton = Instance.new("TextButton", playerListFrame)
+    closeButton.Size, closeButton.Position, closeButton.BackgroundColor3, closeButton.Text, closeButton.TextSize, closeButton.Font, closeButton.TextColor3 = UDim2.new(1, -10, 0, 35), UDim2.new(0, 5, 1, -35), Color3.fromRGB(255, 0, 0), "Close", 14, Enum.Font.Gotham, Color3.fromRGB(255, 255, 255)
+    closeButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            playerListFrame:Destroy()
+        end
+    end)
+end
+
+-- Neuer Button: Spielerliste anzeigen
+local selectPlayerButton = createToggleButton(frame, "Select Player", UDim2.new(0.05, 0, 0.78, 0), function()
+    if selectedPlayer then
+        unselectPlayer()
+    else
+        showPlayerList()
+    end
+    return false
+end)
